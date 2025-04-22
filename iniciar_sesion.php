@@ -11,36 +11,46 @@ $dbname = "ecomovi"; // Nombre de la base de datos
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Verificar si hubo un error en la conexión
+
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error); // Termina el script si hay error
 }
+
 
 // Verifica si el formulario fue enviado mediante POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Captura los datos enviados desde el formulario
     $num_doc_usu = $_POST['num_doc_usu']; // Número de documento del usuario
-    $contraseña = $_POST['contraseña']; // Contraseña ingresada (actualmente no se valida)
+    $contraseña = $_POST['contrasena']; // Contraseña ingresada (actualmente no se valida)
     $tipo_usuario = $_POST['tipo_Inicio']; // Tipo de usuario seleccionado
 
     // Mapeo del tipo de usuario del formulario con el valor del campo "rol" en la BD
     $rol_map = [
         'Usuario' => 'usuario',
         'Administrador' => 'admin',
-        'Supervisor' => 'supervisor'
+        'Supervisor' => 'Supervisor'
     ];
 
     $rol = $rol_map[$tipo_usuario]; // Obtiene el valor correspondiente al tipo de usuario
+
+    // Consulta preparada para prevenir inyecciones SQL
+    $sql = "SELECT * FROM supervisor WHERE num_doc_usu = ? AND rol = ?";
+    $stmt = $conn->prepare($sql); // Prepara la consulta
+    $stmt->bind_param("ss", $num_doc_usu, $rol); // Asocia los parámetros a la consulta
+    $stmt->execute(); // Ejecuta la consulta
+    $resultSupervisor = $stmt->get_result(); // Obtiene los resultados
 
     // Consulta preparada para prevenir inyecciones SQL
     $sql = "SELECT * FROM usuarios WHERE num_doc_usu = ? AND rol = ?";
     $stmt = $conn->prepare($sql); // Prepara la consulta
     $stmt->bind_param("ss", $num_doc_usu, $rol); // Asocia los parámetros a la consulta
     $stmt->execute(); // Ejecuta la consulta
-    $result = $stmt->get_result(); // Obtiene los resultados
+    $resultUsuarios = $stmt->get_result(); // Obtiene los resultados
 
     // Verifica si existe un usuario con esos datos
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc(); // Extrae los datos del usuario
+    if ($resultSupervisor->num_rows > 0 || $resultUsuarios->num_rows > 0) {
+        $user = $resultSupervisor->fetch_assoc(); // Extrae los datos del usuario
+        $user = $resultUsuarios->fetch_assoc(); // Extrae los datos del usuario
         $_SESSION['nombre'] = $user['nombre']; // Guarda el nombre en la sesión
         $_SESSION['rol'] = $rol; // Guarda el rol en la sesión
 
